@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <stdio.h>
 #include <ncurses.h>
 
 #define EXIT_IO 63
@@ -15,7 +14,7 @@
 
 #define FIGLET_PATH "/usr/bin/figlet"
 
-char *read_whole_stream(int file, size_t *size_ptr)
+static char *read_whole_stream(int file, size_t *size_ptr)
 {
     size_t total_size = 0;
     size_t position = 0;
@@ -23,9 +22,6 @@ char *read_whole_stream(int file, size_t *size_ptr)
     const size_t buffer_size = 256;
 
     char *result = NULL;
-
-    // temporary buffer for realloc
-    char *allocation;
 
     int bytes_read = 0;
 
@@ -36,13 +32,7 @@ char *read_whole_stream(int file, size_t *size_ptr)
     {
         if (bytes_read + position == total_size)
         {
-            allocation = realloc(result, total_size + buffer_size);
-
-            if (!allocation)
-            { return NULL; }
-
-            result = allocation;
-
+            result = zrealloc(result, total_size + buffer_size);
 
             total_size += buffer_size;
         }
@@ -58,12 +48,7 @@ char *read_whole_stream(int file, size_t *size_ptr)
         return NULL;
     }
 
-    allocation = realloc(result, position + 1);
-
-    if (!allocation)
-    { return NULL; }
-
-    result = allocation;
+    result =  zrealloc(result, position + 1);
 
     result[position] = '\0';
 
@@ -71,6 +56,34 @@ char *read_whole_stream(int file, size_t *size_ptr)
     {
         *size_ptr = position;
     }
+
+    return result;
+}
+
+char *read_whole_file(FILE *file, size_t *size_ptr)
+{
+    long old_pos = ftell(file);
+
+    if (old_pos == -1)
+    {
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+
+    size_t size = ftell(file);
+    fseek(file, old_pos, SEEK_SET);
+
+    if (size_ptr)
+    {
+        *size_ptr = size;
+    }
+
+    char *result = zmalloc(size + 1);
+
+    fread(result, size, 1, file);
+
+    result[size] = '\0';
 
     return result;
 }
