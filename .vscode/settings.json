@@ -1,0 +1,11 @@
+{
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "files.associations": {
+        "stdlib.h": "c",
+        "atomic": "c",
+        "*.tcc": "c",
+        "iomanip": "c",
+        "istream": "c",
+        "ostream": "c"
+    }
+}
