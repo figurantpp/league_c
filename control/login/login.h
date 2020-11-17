@@ -7,7 +7,7 @@
 struct HeroLogin
 {
     char *id;
-    char *accessCode;
+    unsigned int accessLevel;
     char *username;
 };
 

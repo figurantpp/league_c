@@ -1,24 +1,13 @@
 
 #include <ncurses.h>
+#include <menu/menu.h>
 
 #include "zalloc/zalloc.h"
-#include "config/config.h"
 #include "login/login.h"
 #include "stream/stream.h"
 
-
-struct MenuOption
+struct HeroLogin *authenticate()
 {
-    char *key;
-    char *name;
-    void (*function)();
-};
-
-
-int main()
-{
-    config_setup();
-
     printw("Authentication is required.\n");
 
     printw("Username: ");
@@ -31,17 +20,24 @@ int main()
 
     echo();
 
+    clear();
+
     struct HeroLogin *hero = login_perform(username, password);
 
-    if (hero)
+    if (!hero)
     {
-        printw("Username: '%s'\nAccessCode: '%s'\nID:%s", hero->username, hero->accessCode, hero->id);
-
-        refresh();
-        getch();
+        exit(0);
     }
 
-    hero_login_delete(hero);
     free(username);
     free(password);
+
+    return hero;
+}
+
+int main()
+{
+    struct HeroLogin *hero = authenticate();
+
+    show_menu(hero);
 }

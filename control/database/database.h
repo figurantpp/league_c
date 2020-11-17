@@ -8,7 +8,12 @@ void database_setup();
 
 void database_cleanup();
 
-MYSQL *database_get_connection();
+void database_close(MYSQL **connection);
 
+__attribute__((warn_unused_result))
+__attribute__((returns_nonnull))
+MYSQL *database_connect();
+
+#define DATABASE_AUTO_CLOSE __attribute__((cleanup(database_close)))
 
 #endif

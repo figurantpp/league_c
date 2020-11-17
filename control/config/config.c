@@ -1,9 +1,8 @@
 
 
-#include "config.h"
-
 #include <stdlib.h>
 #include <ncurses.h>
+#include <menu/menu.h>
 
 #include "zalloc/zalloc.h"
 #include "database/database.h"
@@ -22,6 +21,7 @@ static void config_alloc_abort()
     abort();
 }
 
+__attribute__((constructor))
 void config_setup()
 {
     atexit(config_at_exit);
@@ -29,6 +29,8 @@ void config_setup()
     z_alloc_set_abort_function(config_alloc_abort);
 
     database_setup();
+
+    setup_menu();
 
     initscr();
 

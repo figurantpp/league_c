@@ -6,15 +6,36 @@
 #include "database.h"
 #include "config/config.h"
 
-static MYSQL* global_connection;
-
 void database_setup()
+{}
+
+void database_close(MYSQL **connection)
+{
+    mysql_close(*connection);
+}
+
+
+void database_cleanup()
+{
+    mysql_library_end();
+}
+
+MYSQL *database_connect()
 {
     MYSQL *connection = mysql_init(NULL);
 
+    if (connection == NULL)
+    {
+        printw("Not enough memory to start mysql connection");
+
+        refresh();
+
+        exit(CONFIG_EXIT_DATABASE_ERROR);
+    }
+
     if (mysql_real_connect(connection, "localhost", "figurantpp", "beep", "leagueDB", 3600, NULL, 0))
     {
-        global_connection = connection;
+        return connection;
     }
     else
     {
@@ -27,15 +48,4 @@ void database_setup()
         exit(CONFIG_EXIT_DATABASE_ERROR);
 
     }
-}
-
-void database_cleanup()
-{
-    mysql_close(global_connection);
-    mysql_library_end();
-}
-
-MYSQL *database_get_connection()
-{
-    return global_connection;
 }

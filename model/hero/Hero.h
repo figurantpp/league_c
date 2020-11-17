@@ -3,12 +3,32 @@
 #ifndef HERO_H
 #define HERO_H
 
-#include "Entity.h"
 
-struct Hero
+
+/* database view HeroData selection order */
+#define HERO_DATA(x) \
+    x(char *, id) \
+    x(char *, name) \
+    x(char *, codename) \
+    x(char *, species_name) \
+    x(char *, species_scientific_name) \
+    x(char *, username) \
+    x(char *, access_level)
+
+
+#define MEMBER(type, name) type name;
+
+struct HeroData
 {
-    struct Entity base;
-    char *name;
+    HERO_DATA(MEMBER)
 };
+
+#undef MEMBER
+
+
+
+#ifndef HERO_SOURCE_FILE
+#undef HERO_DATA
+#endif
 
 #endif

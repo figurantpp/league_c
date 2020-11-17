@@ -3,9 +3,13 @@ project(league C)
 
 set(CMAKE_C_STANDARD 11)
 
+# Preprocessor
+# set(CMAKE_C_FLAGS "-E")
+set(CMAKE_C_FLAGS "-Wall")
+
 include_directories(control)
 
-add_executable(league main.c)
+add_executable(league main.c control/config/config.c)
 
 add_library(
         zalloc
@@ -19,7 +23,7 @@ add_library(
         STATIC
         control/config/config.h
         control/config/config.c
-)
+        )
 
 add_library(
         login
@@ -47,14 +51,26 @@ add_library(
         STATIC
         model/hero/Hero.c
         model/hero/Hero.h
-        model/hero/Entity.c model/hero/Entity.h)
+        model/hero/Entity.c model/hero/Entity.h
+)
+
+add_library(menu
+        STATIC
+        control/menu/menu.c
+        control/menu/menu.h
+)
+
+add_library(fullmacro
+        STATIC
+        control/fullmacro/fullmacro.c control/fullmacro/deconstruct.h)
 
 target_link_libraries(league -lncurses)
 target_link_libraries(league -lmariadb)
 
 target_link_libraries(league config)
-target_link_libraries(league zalloc)
 target_link_libraries(league login)
+target_link_libraries(league zalloc)
 target_link_libraries(league database)
 target_link_libraries(league stream)
+target_link_libraries(league menu)
 target_link_libraries(league model)
