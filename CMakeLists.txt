@@ -5,7 +5,6 @@ set(CMAKE_C_STANDARD 11)
 
 # Preprocessor
 # set(CMAKE_C_FLAGS "-E")
-set(CMAKE_C_FLAGS "-Wall")
 
 include_directories(control)
 
@@ -23,7 +22,7 @@ add_library(
         STATIC
         control/config/config.h
         control/config/config.c
-        )
+)
 
 add_library(
         login
@@ -58,11 +57,23 @@ add_library(menu
         STATIC
         control/menu/menu.c
         control/menu/menu.h
-)
+        )
 
 add_library(fullmacro
         STATIC
         control/fullmacro/fullmacro.c control/fullmacro/deconstruct.h)
+
+add_library(iterator
+        STATIC
+        control/iterator/iterator.h
+        control/iterator/iterator.c
+        )
+
+add_library(
+        util
+        control/util/util.c
+        control/util/util.h
+)
 
 target_link_libraries(league -lncurses)
 target_link_libraries(league -lmariadb)
@@ -74,3 +85,4 @@ target_link_libraries(league database)
 target_link_libraries(league stream)
 target_link_libraries(league menu)
 target_link_libraries(league model)
+target_link_libraries(league util)

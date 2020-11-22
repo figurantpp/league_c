@@ -1,14 +1,17 @@
 
 #include <mysql/mysql.h>
-#include <string.h>
 #include <ncurses.h>
 
 #include <zalloc/zalloc.h>
+#include <fullmacro/deconstruct.h>
 #include "database/database.h"
+
+#include "util/util.h"
 
 #define HERO_SOURCE_FILE
 #include "Hero.h"
 #undef HERO_SOURCE_FILE
+
 
 
 static struct HeroData *new_hero()
@@ -29,23 +32,36 @@ static void hero_delete(struct HeroData *data)
     }
 }
 
+SET_POINTER_DECONSTRUCTOR_STATIC(StructHeroData, hero_delete)
+
 void hero_display(struct HeroData *data)
 {
 #define SHOW(type, name) \
-    printw(#name ": %s\n", data->name);
+    printw(#name ": %s", data->name); \
+    addch('\n');         \
+    refresh();
 
     HERO_DATA(SHOW)
 #undef SHOW
+
 }
 
-void hero_from_row(struct HeroData *data, MYSQL_ROW* row)
+static void hero_from_row(struct HeroData *data, MYSQL_ROW row)
 {
     int i = 0;
 
-#define GET(type, name) data->name = strdup(*row[i++]);
+#define GET(type, name) \
+    { data->name = (row[i++]); }
+
     HERO_DATA(GET)
 #undef GET
+}
 
+static void hero_copy(struct HeroData *target, struct HeroData *source)
+{
+#define COPY(t, name) { target->name = source->name; }
+    HERO_DATA(COPY)
+#undef COPY
 }
 
 void show_heroes()
@@ -58,26 +74,27 @@ void show_heroes()
     }
 
 
-    MYSQL_RES *result = mysql_store_result(connection);
+    UNIQUE_POINTER(MYSQL_RES) result = mysql_store_result(connection);
 
-    struct HeroData *data = new_hero();
+    UNIQUE_POINTER(StructHeroData) data = new_hero();
 
     MYSQL_ROW row;
 
     while ((row = mysql_fetch_row(result)))
     {
-        hero_from_row(data, &row);
+        printw("--- --- ---\n");
+
+        hero_from_row(data, row);
 
         hero_display(data);
     }
 
-    mysql_free_result(result);
+    memset(data, 0, sizeof(struct HeroData));
 
     refresh();
 
     getch();
 
-    hero_delete(data);
 
 
 }

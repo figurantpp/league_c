@@ -15,6 +15,10 @@
 
 #define HERO_IMAGE_FILE_PATH "/home/figurantpp/Desktop/programming/c/league/art"
 
+
+SET_POINTER_DECONSTRUCTOR(StructHeroLogin, hero_login_delete)
+SET_POINTER_DECONSTRUCTOR_STATIC(FILE, fclose)
+
 static void display_hero_image(char *codename)
 {
     // TODO: Move ascii part to another place
@@ -23,9 +27,15 @@ static void display_hero_image(char *codename)
 
     /* Text Processing */
 
-    char *position, *buffer, *file_path;
-    FILE *file;
-    char *message;
+    char *position;
+
+    AUTO_FREE char *buffer = NULL;
+
+    AUTO_FREE char *file_path = NULL;
+
+    FILE* file = NULL;
+
+    AUTO_FREE char *message = NULL;
 
     // Replacing spaces with _
     while ((position = strchr(codename, ' ')))
@@ -46,8 +56,6 @@ static void display_hero_image(char *codename)
 
     file = fopen(file_path, "r");
 
-    free(file_path);
-
     if (file == NULL)
     {
         printw("Error while opening file: '%s'\n", strerror(errno));
@@ -58,17 +66,18 @@ static void display_hero_image(char *codename)
 
     if (!message)
     {
-        goto error;
+        printw("Call to figlet failed");
+        refresh();
+        return;
     }
 
     size_t message_size = strlen(message);
     size_t ascii_art_size;
 
-    char *ascii_art = read_whole_file(file, &ascii_art_size);
+    AUTO_FREE char *ascii_art = read_whole_file(file, &ascii_art_size);
 
     if (!ascii_art)
     {
-        free(message);
         goto error;
     }
 
@@ -78,10 +87,6 @@ static void display_hero_image(char *codename)
     write_center(buffer);
 
     addch('\n');
-
-    free(message);
-    free(ascii_art);
-    free(buffer);
 
     refresh();
 
@@ -104,10 +109,10 @@ void *login_perform(char *username, char *password)
 
     char *format = "call LoginOf('%s', '%s');";
 
-    // format_len - two %s specifiers, + username + password
+    // format length - two %s specifiers, + username + password + '\0'
     size_t size = strlen(format) - 4 + strlen(username) + strlen(password) + 1;
 
-    char *buffer = zmalloc(size);
+    AUTO_FREE char *buffer = zmalloc(size);
 
     snprintf(buffer, size, format, username, password);
 
@@ -117,11 +122,9 @@ void *login_perform(char *username, char *password)
     {
         printw("Execution failed: %s\n", mysql_error(connection));
         refresh();
-        free(buffer);
         return NULL;
     }
 
-    free(buffer);
 
     MYSQL_RES *result = mysql_use_result(connection);
 
@@ -131,7 +134,7 @@ void *login_perform(char *username, char *password)
     {
         struct HeroLogin *hero = zmalloc(sizeof(struct HeroLogin));
 
-        char *codename;
+        AUTO_FREE char *codename = NULL;
 
         hero->id = strdup(row[0]);
         if (!hero->id)
@@ -158,7 +161,6 @@ void *login_perform(char *username, char *password)
 
         display_hero_image(codename);
 
-        free(codename);
 
         return hero;
 
@@ -182,9 +184,8 @@ void *login_perform(char *username, char *password)
             attron(COLOR_PAIR(1));
         }
 
-        char *message = figlet("Error");
+        AUTO_FREE char *message = figlet("Error");
         write_center(message);
-        free(message);
 
         printw("Unauthorized Access; Aborting.\n");
 
@@ -195,7 +196,6 @@ void *login_perform(char *username, char *password)
         {
             attroff(COLOR_PAIR(1));
         }
-
 
         mysql_free_result(result);
 

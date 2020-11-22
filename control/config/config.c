@@ -21,6 +21,18 @@ static void config_alloc_abort()
     abort();
 }
 
+static void ncurses_setup()
+{
+    initscr();
+
+    if (has_colors())
+    {
+        start_color();
+    }
+
+    scrollok(stdscr, TRUE);
+}
+
 __attribute__((constructor))
 void config_setup()
 {
@@ -28,14 +40,10 @@ void config_setup()
 
     z_alloc_set_abort_function(config_alloc_abort);
 
-    database_setup();
-
     setup_menu();
 
-    initscr();
+    database_setup();
 
-    if (has_colors())
-    {
-        start_color();
-    }
+
+    ncurses_setup();
 }

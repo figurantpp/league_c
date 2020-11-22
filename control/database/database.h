@@ -4,6 +4,8 @@
 
 #include <mysql/mysql.h>
 
+#include <iterator/iterator.h>
+
 void database_setup();
 
 void database_cleanup();

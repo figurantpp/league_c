@@ -5,6 +5,9 @@
 
 #include "database.h"
 #include "config/config.h"
+#include "fullmacro/deconstruct.h"
+
+SET_POINTER_DECONSTRUCTOR(MYSQL_RES, mysql_free_result)
 
 void database_setup()
 {}
@@ -46,6 +49,5 @@ MYSQL *database_connect()
         mysql_close(connection);
 
         exit(CONFIG_EXIT_DATABASE_ERROR);
-
     }
 }

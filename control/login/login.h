@@ -3,6 +3,7 @@
 #define LOGIN_H
 
 #include <stdbool.h>
+#include "fullmacro/deconstruct.h"
 
 struct HeroLogin
 {
@@ -10,6 +11,9 @@ struct HeroLogin
     unsigned int accessLevel;
     char *username;
 };
+
+
+typedef struct HeroLogin StructHeroLogin;
 
 void hero_login_delete(struct HeroLogin* hero);
 

@@ -11,12 +11,12 @@ struct HeroLogin *authenticate()
     printw("Authentication is required.\n");
 
     printw("Username: ");
-    char *username = read_single_line();
+    char *username = "batman01"; // read_single_line();
 
     noecho();
 
     printw("Password: ");
-    char *password = read_single_line();
+    char *password = "beepboop"; // read_single_line();
 
     echo();
 
@@ -29,15 +29,13 @@ struct HeroLogin *authenticate()
         exit(0);
     }
 
-    free(username);
-    free(password);
 
     return hero;
 }
 
 int main()
 {
-    struct HeroLogin *hero = authenticate();
+    UNIQUE_POINTER(StructHeroLogin) hero = authenticate();
 
     show_menu(hero);
 }

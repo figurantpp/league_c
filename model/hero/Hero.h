@@ -5,6 +5,7 @@
 
 
 
+
 /* database view HeroData selection order */
 #define HERO_DATA(x) \
     x(char *, id) \
@@ -22,6 +23,8 @@ struct HeroData
 {
     HERO_DATA(MEMBER)
 };
+
+typedef struct HeroData StructHeroData;
 
 #undef MEMBER
 
