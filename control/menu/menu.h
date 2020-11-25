@@ -15,7 +15,7 @@ struct MenuOption
     int min_access_level;
 };
 
-void setup_menu();
+void menu_setup();
 
 _Noreturn void show_menu(struct HeroLogin *hero);
 

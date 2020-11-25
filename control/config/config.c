@@ -40,7 +40,7 @@ void config_setup()
 
     z_alloc_set_abort_function(config_alloc_abort);
 
-    setup_menu();
+    menu_setup();
 
     database_setup();
 

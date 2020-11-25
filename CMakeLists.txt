@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD 11)
 # set(CMAKE_C_FLAGS "-E")
 
 include_directories(control)
+include_directories(model)
 
 add_executable(league main.c control/config/config.c)
 
@@ -48,9 +49,8 @@ add_library(
 add_library(
         model
         STATIC
-        model/hero/Hero.c
-        model/hero/Hero.h
-        model/hero/Entity.c model/hero/Entity.h
+        model/model_display/display.c
+        model/model_display/display.h
 )
 
 add_library(menu

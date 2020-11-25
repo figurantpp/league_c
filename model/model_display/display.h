@@ -3,9 +3,6 @@
 #ifndef HERO_H
 #define HERO_H
 
-
-
-
 /* database view HeroData selection order */
 #define HERO_DATA(x) \
     x(char *, id) \
@@ -28,6 +25,20 @@ typedef struct HeroData StructHeroData;
 
 #undef MEMBER
 
+
+void show_heroes();
+
+void show_villains();
+
+void show_attacks();
+
+void show_traits();
+
+void show_equipments();
+
+void show_species();
+
+void show_hidings();
 
 
 #ifndef HERO_SOURCE_FILE

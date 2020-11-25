@@ -12,6 +12,8 @@
 
 #include "stream/stream.h"
 
+#include "model_display/display.h"
+
 static void add_hero()
 {}
 
@@ -40,26 +42,6 @@ static void finalize()
 
 //
 
-void show_heroes();
-
-static void show_villains()
-{}
-
-static void show_attacks()
-{}
-
-static void show_traits()
-{}
-
-static void show_equipment()
-{}
-
-static void show_species()
-{}
-
-static void show_hiding()
-{}
-
 
 
 static struct MenuOption MENU_OPTIONS[] = {
@@ -76,13 +58,13 @@ static struct MenuOption MENU_OPTIONS[] = {
         { "4b", "Show Attacks", show_attacks, 3},
 
         { "5a", "Register a new Equipment", add_equipment, 6},
-        { "5b", "Show Equipments", show_equipment, 5},
+        { "5b", "Show Equipments", show_equipments, 5},
 
         { "6a", "Register a new Species", add_species, 8},
         { "6b", "Show Species", show_species, 7},
 
         { "7a", "Register a Hiding", add_hiding, 10},
-        { "7b", "Show Hidings", show_hiding, 9},
+        { "7b", "Show Hidings", show_hidings, 9},
 
         { "00", "Exit", finalize, 0},
 };
@@ -95,7 +77,7 @@ static struct MenuIndex
     struct MenuOption *next;
 } INDEXES[MENU_OPTIONS_COUNT];
 
-void setup_menu()
+void menu_setup()
 {
     size_t index, i;
 
@@ -146,6 +128,8 @@ void show_menu(struct HeroLogin *hero)
                 printw("%s - %s\n", option->key, option->name);
             }
 
+            printw("%d\n", strcmp(get_menu_option(option->key)->key, option->key));
+
             if ((i - 1) % 2 == 0)
             {
                 addch('\n');
@@ -159,6 +143,7 @@ void show_menu(struct HeroLogin *hero)
         if (strlen(line) != 2)
         {
             printw("Invalid Option\n");
+            refresh();
             getch();
 
             goto end;
