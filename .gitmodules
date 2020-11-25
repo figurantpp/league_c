@@ -1,0 +1,3 @@
+[submodule "control/c-iterator"]
+	path = control/c-iterator
+	url = https://github.com/figurantpp/c-iterator
