@@ -4,7 +4,7 @@
 
 #include <mysql/mysql.h>
 
-#include <iterator/iterator.h>
+#include <c-iterator/iterator.h>
 
 void database_setup();
 
@@ -17,5 +17,7 @@ __attribute__((returns_nonnull))
 MYSQL *database_connect();
 
 #define DATABASE_AUTO_CLOSE __attribute__((cleanup(database_close)))
+
+
 
 #endif

@@ -5,17 +5,14 @@
 #include "menu.h"
 
 #include <stdlib.h>
-#include <endian.h>
 #include <ncurses.h>
 #include <stdint.h>
 #include <string.h>
+#include <model_add/add.h>
 
 #include "stream/stream.h"
 
 #include "model_display/display.h"
-
-static void add_hero()
-{}
 
 static void add_villain()
 {}
@@ -127,8 +124,6 @@ void show_menu(struct HeroLogin *hero)
             {
                 printw("%s - %s\n", option->key, option->name);
             }
-
-            printw("%d\n", strcmp(get_menu_option(option->key)->key, option->key));
 
             if ((i - 1) % 2 == 0)
             {

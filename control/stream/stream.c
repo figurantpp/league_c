@@ -174,6 +174,10 @@ void find_size_of_text(char *text, int result[2])
     result[1] = size_y;
 }
 
+/**
+ * Reads a single line from STDBUF until '\n' is found or CONFIG_MAX_INPUT_SIZE characters are read.
+ * @return The malloc allocated always null terminated string containing the read data.
+ */
 char *read_single_line()
 {
     refresh();

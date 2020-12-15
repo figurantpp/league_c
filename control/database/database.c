@@ -8,6 +8,7 @@
 #include "fullmacro/deconstruct.h"
 
 SET_POINTER_DECONSTRUCTOR(MYSQL_RES, mysql_free_result)
+SET_POINTER_DECONSTRUCTOR(MYSQL_STMT, mysql_stmt_close)
 
 void database_setup()
 {}

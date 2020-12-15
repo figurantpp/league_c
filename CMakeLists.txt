@@ -51,7 +51,7 @@ add_library(
         STATIC
         model/model_display/display.c
         model/model_display/display.h
-)
+        model/model_add/add.c model/model_add/add.h)
 
 add_library(menu
         STATIC
@@ -63,11 +63,16 @@ add_library(fullmacro
         STATIC
         control/fullmacro/fullmacro.c control/fullmacro/deconstruct.h)
 
-add_library(iterator
+add_library(
+        iterator
         STATIC
-        control/iterator/iterator.h
-        control/iterator/iterator.c
-        )
+        control/c-iterator/iterator.h
+        control/c-iterator/iterator.c
+        control/c-iterator/implementations/track/track.c
+        control/c-iterator/implementations/track/track.h
+        control/c-iterator/implementations/variadic/variadic.c
+        control/c-iterator/implementations/variadic/variadic.h
+)
 
 add_library(
         util
@@ -86,3 +91,4 @@ target_link_libraries(league stream)
 target_link_libraries(league menu)
 target_link_libraries(league model)
 target_link_libraries(league util)
+target_link_libraries(league iterator)

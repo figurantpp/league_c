@@ -6,6 +6,9 @@
 #include <fullmacro/deconstruct.h>
 #include "database/database.h"
 
+#include <c-iterator/implementations/variadic/variadic.h>
+#include <c-iterator/implementations/track/track.h>
+
 #include "util/util.h"
 
 #define HERO_SOURCE_FILE
@@ -15,32 +18,12 @@
 #undef HERO_SOURCE_FILE
 
 
-static struct HeroData *new_hero()
-{
-    return zcalloc(1, sizeof(struct HeroData));
-}
-
-static void hero_delete(struct HeroData *data)
-{
-    if (data)
-    {
-
-#define FREE(type, name) free(data->name);
-        HERO_DATA(FREE)
-#undef FREE
-
-        free(data);
-    }
-}
-
-SET_POINTER_DECONSTRUCTOR_STATIC(StructHeroData, hero_delete)
 
 void hero_display(struct HeroData *data)
 {
 #define SHOW(type, name) \
     printw(#name ": %s", data->name); \
     addch('\n');         \
-    refresh();
 
     HERO_DATA(SHOW)
 #undef SHOW
@@ -56,13 +39,6 @@ static void hero_from_row(struct HeroData *data, MYSQL_ROW row)
 
     HERO_DATA(GET)
 #undef GET
-}
-
-static void hero_copy(struct HeroData *target, struct HeroData *source)
-{
-#define COPY(t, name) { target->name = source->name; }
-    HERO_DATA(COPY)
-#undef COPY
 }
 
 
@@ -101,7 +77,8 @@ void show_heroes()
 }
 
 
-void display_data(char *table, struct Iterator *iterator)
+// We don't use an iterator here cause we need to go through more than once
+void display_data_buffer(char *table, const char **labels)
 {
     char *format = "select * from %s;";
 
@@ -130,17 +107,14 @@ void display_data(char *table, struct Iterator *iterator)
     {
         printw("--- --- ---\n");
 
-        int i;
-        char *column;
+        int i = 0;
+        const char **column = labels;
 
-        FOR_EACH(column, iterator)
+        while (*column)
         {
-            printw("%10s: %s\n", column, row[i++]);
+            printw("%10s: %s\n", *column++, row[i++]);
         }
 
-        for (size_t i = 0; i < total_columns; i++)
-        {
-        }
     }
 
     refresh();
@@ -148,82 +122,45 @@ void display_data(char *table, struct Iterator *iterator)
     getch();
 }
 
-void args_display_data_(char *table, ...)
+// limit: 20 non null arguments
+void display_data(char *table, ...)
 {
     va_list args;
     va_start(args, table);
-}
 
-void show_attacks()
-{
-    const char *labels[] = {
-            "ID",
-            "Date",
-            "Location",
-            NULL
-    };
 
-    display_data("AttackData", labels);
+    AUTO_FREE const char **buffer = store_iterator(pointer_va_list_iterator(&args), sizeof(char*), NULL);
+
+    display_data_buffer(table, buffer);
 }
 
 void show_villains()
 {
-    const char *labels[] = {
-            "ID",
-            "Name",
-            "Codename",
-            "Species",
-            "Species",
-            "Rival",
-            NULL
-    };
-
-    display_data("VillainData", labels);
+    display_data("VillainData", "ID", "Name", "Codename", "Species", "Species", "Rival", NULL);
 }
+
+void show_attacks()
+{
+    display_data("AttackData", "ID", "Date", "Location", NULL);
+}
+
 
 void show_traits()
 {
-    const char *labels[] = {
-            "Name",
-            "Kind",
-            NULL
-    };
-
-    display_data("TraitData", labels);
+    display_data("TraitData", "Name", "Kind", NULL);
 }
 
 void show_equipments()
 {
-
-    const char *labels[] = {
-            "Name",
-            "Description",
-            "Utility",
-            NULL
-    };
-    display_data("EquipmentData", labels);
+    display_data("EquipmentData", "Name", "Description", "Utility", NULL);
 }
 
 void show_species()
 {
-    const char *labels[] = {
-            "Name",
-            "ScientificName",
-            NULL
-    };
-
-    display_data("SpeciesData", labels);
+    display_data("SpeciesData", "Name", "ScientificName", NULL);
 }
 
 void show_hidings()
 {
-    const char *labels[] = {
-            "ID",
-            "Owner",
-            "Location",
-            NULL
-    };
-
-
-    display_data("Hiding", labels);
+    display_data("Hiding", "ID", "Owner", "Location", NULL);
 }
