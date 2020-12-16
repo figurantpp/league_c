@@ -232,3 +232,23 @@ void write_center(char *text)
 
 
 }
+
+/**
+ * Converts a va_list of a NULL terminated pointers to a single buffer containing the given pointers.
+ * @param list
+ * @note The list needs to have at least one NULL terminated pointer, therefore it must not be empty.
+ * @return THe buffer containing the list's data.
+ */
+void **pointer_va_list_to_buffer(va_list list)
+{
+
+    void *allocation;
+    void *result;
+    size_t offset;
+    size_t total_allocated;
+    size_t buffer_size;
+
+
+
+
+}

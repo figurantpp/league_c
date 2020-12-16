@@ -9,6 +9,7 @@
 #include <database/database.h>
 #include <stream/stream.h>
 #include <fullmacro/deconstruct.h>
+#include <zalloc/zalloc.h>
 
 #define end(message, ...) \
     ({printw("Error during insertion execution.\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return -1;})
@@ -140,11 +141,57 @@ static long insert_entity(MYSQL* connection, char *species_id, char *name, char 
     return id;
 }
 
-#undef end
 
+
+int perform_insertion(MYSQL *connection, const char *query, const char ** const arguments)
+{
+    size_t count = 0;
+
+    for (const char** i = arguments; *i++; count++);
+
+
+    UNIQUE_POINTER(MYSQL_STMT) statement = mysql_stmt_init(connection);
+
+    if (!statement)
+    {
+        end("Statement Allocation Failed");
+    }
+
+    if (!mysql_stmt_prepare(statement, query, strlen(query)))
+    {
+        end("Statement Preparation Failed: %s", mysql_stmt_error(statement));
+    }
+
+    if (mysql_stmt_param_count(statement) > count)
+    {
+        end("MYSQL query has more statements then the provided amount");
+    }
+
+    AUTO_FREE MYSQL_BIND* binding = zcalloc(count , sizeof(MYSQL_BIND));
+
+    for (size_t i = 0; i < count; i++)
+    {
+        binding[i].buffer_type = MYSQL_TYPE_STRING;
+        binding[i].buffer = (char*) arguments[i];
+        binding[i].buffer_length = strlen(arguments[i]);
+    }
+
+    if (mysql_stmt_bind_param(statement, binding))
+    {
+        end("Statement Binding Failed: %s", mysql_stmt_error(statement));
+    }
+
+    if (mysql_stmt_execute(statement))
+    {
+        end("Statement Execution Failed: %s", mysql_stmt_error(statement));
+    }
+
+    return 0;
+}
+
+#undef end
 #define end(message, ...) \
     ({printw("Error during insertion execution.\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return;})
-
 
 void add_hero()
 {
@@ -221,19 +268,16 @@ void add_hero()
     parameters[1].buffer_type = MYSQL_TYPE_STRING;
     parameters[1].buffer = access_level;
     parameters[1].buffer_length = sizes[0];
-    parameters[1].length = sizes;
 
     // Username: string
     parameters[2].buffer_type = MYSQL_TYPE_STRING;
     parameters[2].buffer = username;
     parameters[2].buffer_length = sizes[1];
-    parameters[2].length = sizes + 1;
 
     // Password: string
     parameters[3].buffer_type = MYSQL_TYPE_STRING;
     parameters[3].buffer = password;
     parameters[3].buffer_length = sizes[2];
-    parameters[3].length = sizes + 2;
 
     if (mysql_stmt_bind_param(statement, parameters) != 0)
     {
