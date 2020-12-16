@@ -9,22 +9,27 @@
 #include <database/database.h>
 #include <stream/stream.h>
 #include <fullmacro/deconstruct.h>
-#include <zalloc/zalloc.h>
 
-static void insert_species(species_id, name, codename)
-char *species_id;
-char *name;
-char *codename;
+#define end(message, ...) \
+    ({printw("Error during insertion execution.\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return -1;})
+
+/**
+ * Inserts an entity with the given data and return its ID.
+ * @param connection The connection to operate on
+ * @param species_id  The species ID of the entity
+ * @param name The entity name
+ * @param codename The entity codename
+ * @return The entity's ID or -1 if the insertion failed
+ */
+static long insert_entity(MYSQL* connection, char *species_id, char *name, char *codename)
 {
 
-#define end(message, ...) ({printw("Error during execution\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return;})
 
-    const char *insertion_format =
+    const char *format =
             "insert into Entity (SpeciesID, Name, Codename) "
             " values (?, ?, ?);";
 
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
 
     UNIQUE_POINTER(MYSQL_STMT) statement = mysql_stmt_init(connection);
 
@@ -33,7 +38,7 @@ char *codename;
         end("Not enough memory to run mysql statement");
     }
 
-    if (mysql_stmt_prepare(statement, insertion_format, strlen(insertion_format)) != 0)
+    if (mysql_stmt_prepare(statement, format, strlen(format)) != 0)
     {
         end("Mysql Error: %s", mysql_error(connection));
     }
@@ -59,34 +64,86 @@ char *codename;
     parameters[1].buffer_type = MYSQL_TYPE_STRING;
     parameters[1].buffer = name;
     parameters[1].buffer_length = lengths[1];
-    parameters[1].buffer = lengths + 1;
+    parameters[1].length = lengths + 1;
 
     parameters[2].buffer_type = MYSQL_TYPE_STRING;
     parameters[2].buffer = codename;
     parameters[2].buffer_length = lengths[2];
-    parameters[2].buffer = lengths + 2;
+    parameters[2].length = lengths + 2;
 
     if (mysql_stmt_bind_param(statement, parameters) != 0)
     {
-        printw("Parameter Binding Failed: %s", mysql_stmt_error(statement));
-        return;
+        end("Parameter Binding Failed: %s", mysql_stmt_error(statement));
     }
-
 
     if (mysql_stmt_execute(statement) != 0)
     {
-        printw("Statement failed: %s", mysql_stmt_error(statement));
-        return;
+        end("Statement failed: %s", mysql_stmt_error(statement));
     }
 
     // After we insert the entity, we need to grab its id
 
-    // UNIQUE_POINTER(MYSQL_STMT) id_statement = mysql_stmt_init(connection);
 
-    // const char *selection_format = "select last_insert_id() as 'ID'";
+    mysql_stmt_close(statement);
 
+    statement = NULL;
 
+    statement = mysql_stmt_init(connection);
+
+    if (!statement)
+    {
+        end("Not enough memory to initialize selection");
+    }
+
+    format = "select last_insert_id() as 'ID'";
+
+    if (mysql_stmt_prepare(statement, format, strlen(format)) != 0)
+    {
+        end("Formatting failed: %s", mysql_stmt_error(statement));
+    }
+
+    if (mysql_stmt_param_count(statement) != 0)
+    {
+        end("MySql Invalid Argument count");
+    }
+
+    // We first execute then grab the results
+
+    if (mysql_stmt_execute(statement) != 0)
+    {
+        end("Statement Error: %s", mysql_stmt_error(statement));
+    }
+
+    memset(parameters, 0, sizeof(*parameters));
+
+    unsigned int id;
+
+    parameters->buffer_type = MYSQL_TYPE_LONG;
+    parameters->buffer = &id;
+    parameters->is_unsigned = true;
+
+    if (mysql_stmt_bind_result(statement, parameters) != 0)
+    {
+        end("Error while binding: %s\n", mysql_stmt_error(statement));
+    }
+
+    if (mysql_stmt_store_result(statement) != 0)
+    {
+        end("Failed to store statement result: ", mysql_stmt_error(statement));
+    }
+
+    if (mysql_stmt_fetch(statement) != 0)
+    {
+        end("Failed to get insertion ID");
+    }
+
+    return id;
 }
+
+#undef end
+
+#define end(message, ...) \
+    ({printw("Error during insertion execution.\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return;})
 
 
 void add_hero()
@@ -111,7 +168,7 @@ void add_hero()
     access_level = read_single_line();
 
     printw("Username:");
-    access_level = read_single_line();
+    username = read_single_line();
 
     printw("Password:");
     password = read_single_line();
@@ -119,5 +176,73 @@ void add_hero()
     // TODO: Implement Traits
     // printw("Traits:");
 
-    insert_species(species_id, name, codename);
+    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+
+    long entity_id = insert_entity(connection, species_id, name, codename);
+
+    if (entity_id == -1)
+    {
+        end("Insertion Failed");
+    }
+
+    mysql_close(connection);
+
+    connection = database_connect();
+
+    char *format = "insert into Hero (EntityID, AccessCode, Username, Password) values (?, ?, ?, ?)";
+
+    UNIQUE_POINTER(MYSQL_STMT) statement = mysql_stmt_init(connection);
+
+    if (statement == NULL)
+    {
+        end("Not enough memory");
+    }
+
+    if (mysql_stmt_prepare(statement, format, strlen(format)) != 0)
+    {
+        end("Statement preparation failed: %s", mysql_stmt_error(statement));
+    }
+
+     if (mysql_stmt_param_count(statement) != 4)
+     {
+         end("Invalid State: Illegal Argument Count");
+     }
+
+    MYSQL_BIND parameters[4];
+    memset(parameters, 0, sizeof(parameters));
+
+    unsigned long sizes[3] = {strlen(access_level), strlen(username), strlen(password)};
+
+    // EntityID: int
+    parameters[0].buffer_type = MYSQL_TYPE_LONG;
+    parameters[0].buffer = &entity_id;
+
+    // AccessLevel: long
+    parameters[1].buffer_type = MYSQL_TYPE_STRING;
+    parameters[1].buffer = access_level;
+    parameters[1].buffer_length = sizes[0];
+    parameters[1].length = sizes;
+
+    // Username: string
+    parameters[2].buffer_type = MYSQL_TYPE_STRING;
+    parameters[2].buffer = username;
+    parameters[2].buffer_length = sizes[1];
+    parameters[2].length = sizes + 1;
+
+    // Password: string
+    parameters[3].buffer_type = MYSQL_TYPE_STRING;
+    parameters[3].buffer = password;
+    parameters[3].buffer_length = sizes[2];
+    parameters[3].length = sizes + 2;
+
+    if (mysql_stmt_bind_param(statement, parameters) != 0)
+    {
+        end("Parameter binding failed: %s", mysql_stmt_error(statement));
+    }
+
+    if (mysql_stmt_execute(statement) != 0)
+    {
+        end("Execution failed: %s", mysql_stmt_error(statement));
+    }
+
 }

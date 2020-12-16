@@ -31,7 +31,7 @@ create view HeroData as
 
 
 select Entity.ID,
-       Species.Name,
+       Entity.Name,
        Codename,
        Species.Name as 'SpeciesName',
        Species.ScientificName,
