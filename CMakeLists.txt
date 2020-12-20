@@ -35,8 +35,10 @@ add_library(
 add_library(
         database
         STATIC
-        control/database/database.h
+        control/database/operations/operations.c
         control/database/database.c
+        control/database/database.h
+        control/database/operations/operations.h
 )
 
 add_library(
@@ -51,7 +53,9 @@ add_library(
         STATIC
         model/model_display/display.c
         model/model_display/display.h
-        model/model_add/add.c model/model_add/add.h)
+        model/model_add/add.c model/model_add/add.h
+        model/model_utils/util.c
+        model/model_utils/util.h)
 
 add_library(menu
         STATIC
@@ -59,9 +63,11 @@ add_library(menu
         control/menu/menu.h
         )
 
-add_library(fullmacro
+add_library(
+        fullmacro
         STATIC
-        control/fullmacro/fullmacro.c control/fullmacro/deconstruct.h)
+        control/fullmacro/fullmacro.c control/fullmacro/deconstruct.h
+)
 
 add_library(
         iterator

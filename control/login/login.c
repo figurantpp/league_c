@@ -4,7 +4,6 @@
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #include "login.h"
 #include "database/database.h"
@@ -12,8 +11,7 @@
 #include "stream/stream.h"
 
 #include "fullmacro/deconstruct.h"
-
-#define HERO_IMAGE_FILE_PATH "/home/figurantpp/Desktop/programming/c/league/art"
+#include "model_utils/util.h"
 
 
 SET_POINTER_DECONSTRUCTOR(StructHeroLogin, hero_login_delete)
@@ -21,48 +19,7 @@ SET_POINTER_DECONSTRUCTOR_STATIC(FILE, fclose)
 
 static void display_hero_image(char *codename)
 {
-    // TODO: Move ascii part to another place
-
-    // The path is defined by imagepath + '/' + name.lower().replace(' ', '_')
-
-    /* Text Processing */
-
-    char *position;
-
-    AUTO_FREE char *buffer = NULL;
-
-    AUTO_FREE char *file_path = NULL;
-
-    FILE* file = NULL;
-
-    AUTO_FREE char *message = NULL;
-
-    // Replacing spaces with _
-    while ((position = strchr(codename, ' ')))
-    { *position = '_'; }
-
-    // Lower casing
-    for (position = codename; *position; position++)
-    { *position = (char) tolower((unsigned char) *position); }
-
-    //  + extra /
-    //  + extra '\0'
-    size_t image_path_size = strlen(HERO_IMAGE_FILE_PATH);
-    size_t file_path_size = image_path_size + strlen(codename) + 2;
-
-    file_path = zmalloc(file_path_size);
-
-    snprintf(file_path, file_path_size, "%s/%s", HERO_IMAGE_FILE_PATH, codename);
-
-    file = fopen(file_path, "r");
-
-    if (file == NULL)
-    {
-        printw("Error while opening file: '%s'\n", strerror(errno));
-        return;
-    }
-
-    message = figlet("Welcome");
+    AUTO_FREE char *message = figlet("Welcome");
 
     if (!message)
     {
@@ -74,14 +31,14 @@ static void display_hero_image(char *codename)
     size_t message_size = strlen(message);
     size_t ascii_art_size;
 
-    AUTO_FREE char *ascii_art = read_whole_file(file, &ascii_art_size);
+    AUTO_FREE char *ascii_art = hero_image_from_codename(codename, &ascii_art_size);
 
     if (!ascii_art)
     {
-        goto error;
+        printw("Failed to print message.");
     }
 
-    buffer = zmalloc(message_size + ascii_art_size + 1);
+    AUTO_FREE char *buffer = zmalloc(message_size + ascii_art_size + 1);
     snprintf(buffer, message_size + ascii_art_size, "%s%s", message, ascii_art);
 
     write_center(buffer);
@@ -94,13 +51,6 @@ static void display_hero_image(char *codename)
 
     clear();
 
-    fclose(file);
-
-    return;
-
-    error:
-
-    printw("Failed to print message.");
 }
 
 void *login_perform(char *username, char *password)

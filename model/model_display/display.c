@@ -8,6 +8,8 @@
 
 #include <c-iterator/implementations/variadic/variadic.h>
 #include <c-iterator/implementations/track/track.h>
+#include <model_utils/util.h>
+#include <string.h>
 
 #include "util/util.h"
 
@@ -21,6 +23,10 @@
 
 void hero_display(struct HeroData *data)
 {
+    AUTO_FREE char *art = hero_image_from_codename(data->codename, NULL);
+
+    printw("%s", art ?: "");
+
 #define SHOW(type, name) \
     printw(#name ": %s", data->name); \
     addch('\n');         \
@@ -50,7 +56,6 @@ void show_heroes()
     {
         printw("Execution failed: %s\n", mysql_error(connection));
     }
-
 
     UNIQUE_POINTER(MYSQL_RES)result = mysql_store_result(connection);
 
@@ -147,17 +152,17 @@ void show_attacks()
 
 void show_traits()
 {
-    display_data("TraitData", "Name", "Kind", NULL);
+    display_data("TraitData", "ID", "Name", "Kind", NULL);
 }
 
 void show_equipments()
 {
-    display_data("EquipmentData", "Name", "Description", "Utility", NULL);
+    display_data("EquipmentData", "ID", "Name", "Description", "Utility", NULL);
 }
 
 void show_species()
 {
-    display_data("SpeciesData", "Name", "ScientificName", NULL);
+    display_data("SpeciesData", "ID", "Name", "ScientificName", NULL);
 }
 
 void show_hidings()

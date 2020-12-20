@@ -14,23 +14,6 @@
 
 #include "model_display/display.h"
 
-static void add_villain()
-{}
-
-static void add_attack()
-{}
-
-static void add_trait()
-{}
-
-static void add_equipment()
-{}
-
-static void add_species()
-{}
-
-static void add_hiding()
-{}
 
 static void finalize()
 {
@@ -38,8 +21,6 @@ static void finalize()
 }
 
 //
-
-
 
 static struct MenuOption MENU_OPTIONS[] = {
         { "1a", "Register a new Hero", add_hero, 10},

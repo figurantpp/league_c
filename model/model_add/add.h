@@ -8,3 +8,15 @@
 #endif //LEAGUE_ADD_H
 
 void add_hero();
+
+void add_villain();
+
+void add_trait();
+
+void add_attack();
+
+void add_equipment();
+
+void add_species();
+
+void add_hiding();
