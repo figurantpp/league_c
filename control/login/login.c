@@ -10,16 +10,16 @@
 #include "zalloc/zalloc.h"
 #include "stream/stream.h"
 
-#include "fullmacro/deconstruct.h"
 #include "model_utils/util.h"
 
 
 SET_POINTER_DECONSTRUCTOR(StructHeroLogin, hero_login_delete)
 SET_POINTER_DECONSTRUCTOR_STATIC(FILE, fclose)
 
+// DONE
 static void display_hero_image(char *codename)
 {
-    AUTO_FREE char *message = figlet("Welcome");
+    char *message = figlet("Welcome");
 
     if (!message)
     {
@@ -31,17 +31,26 @@ static void display_hero_image(char *codename)
     size_t message_size = strlen(message);
     size_t ascii_art_size;
 
-    AUTO_FREE char *ascii_art = hero_image_from_codename(codename, &ascii_art_size);
+    char *ascii_art = hero_image_from_codename(codename, &ascii_art_size);
 
     if (!ascii_art)
     {
+        free(message);
+
         printw("Failed to print message.");
+        refresh();
+        return;
     }
 
-    AUTO_FREE char *buffer = zmalloc(message_size + ascii_art_size + 1);
+    char *buffer = zmalloc(message_size + ascii_art_size + 1);
     snprintf(buffer, message_size + ascii_art_size, "%s%s", message, ascii_art);
 
+    free(message);
+    free(ascii_art);
+
     write_center(buffer);
+
+    free(buffer);
 
     addch('\n');
 
@@ -53,16 +62,18 @@ static void display_hero_image(char *codename)
 
 }
 
+// WORKING ON
 void *login_perform(char *username, char *password)
 {
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
-    char *format = "call LoginOf('%s', '%s');";
+    const char *format = "call LoginOf('%s', '%s');";
 
     // format length - two %s specifiers, + username + password + '\0'
     size_t size = strlen(format) - 4 + strlen(username) + strlen(password) + 1;
 
-    AUTO_FREE char *buffer = zmalloc(size);
+    // AUTO: Fix
+    char *buffer = zmalloc(size);
 
     snprintf(buffer, size, format, username, password);
 
@@ -75,6 +86,8 @@ void *login_perform(char *username, char *password)
         return NULL;
     }
 
+    free(buffer);
+
 
     MYSQL_RES *result = mysql_use_result(connection);
 
@@ -84,7 +97,8 @@ void *login_perform(char *username, char *password)
     {
         struct HeroLogin *hero = zmalloc(sizeof(struct HeroLogin));
 
-        AUTO_FREE char *codename = NULL;
+        // AUTO: Fix
+        char *codename = NULL;
 
         hero->id = strdup(row[0]);
         if (!hero->id)
@@ -107,9 +121,14 @@ void *login_perform(char *username, char *password)
         { goto invalid; }
 
         mysql_free_result(result);
+
+        mysql_close(connection);
+
         result = NULL;
 
         display_hero_image(codename);
+
+        free(codename);
 
 
         return hero;
@@ -122,10 +141,18 @@ void *login_perform(char *username, char *password)
 
         mysql_free_result(result);
 
+        mysql_close(connection);
+
+        free(codename);
+
         return NULL;
     }
     else
     {
+        mysql_free_result(result);
+
+        mysql_close(connection);
+
         clear();
 
         if (has_colors())
@@ -147,7 +174,6 @@ void *login_perform(char *username, char *password)
             attroff(COLOR_PAIR(1));
         }
 
-        mysql_free_result(result);
 
         return NULL;
     }
