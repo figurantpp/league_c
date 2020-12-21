@@ -41,9 +41,6 @@ void config_setup()
     z_alloc_set_abort_function(config_alloc_abort);
 
     menu_setup();
-
     database_setup();
-
-
     ncurses_setup();
 }

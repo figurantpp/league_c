@@ -9,4 +9,10 @@
 
 char *safe_dup(char *str);
 
+char *full_trim_string(char *str);
+
+void right_trim_string(char *str);
+
+const char* left_trim_string(const char *str);
+
 #endif //LEAGUE_UTIL_H

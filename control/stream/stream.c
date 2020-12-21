@@ -186,7 +186,7 @@ char *read_single_line()
 
     if (getnstr(buffer, CONFIG_MAX_INPUT_SIZE) != OK)
     {
-        return NULL;
+        return zcalloc(1,1);
     }
 
     buffer[CONFIG_MAX_INPUT_SIZE] = '\0';

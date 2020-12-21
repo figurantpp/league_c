@@ -10,6 +10,7 @@
 #include <fullmacro/deconstruct.h>
 #include <c-iterator/implementations/track/track.h>
 #include <database/operations/operations.h>
+#include <util/util.h>
 
 #define end(message, ...) \
     ({printw("Insertion failed.\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return NULL;})
@@ -39,58 +40,17 @@ static char *insert_entity(MYSQL *connection, const char *species_id, const char
 
     // After we insert the entity, we need to grab its id
 
+    char *id;
 
-    UNIQUE_POINTER(MYSQL_STMT)statement = mysql_stmt_init(connection);
+    const char *error = database_get_last_insertion_id(connection, &id);
 
-    if (!statement)
+    if (error)
     {
-        end("Not enough memory to initialize selection");
+        end("Error: %s", error);
     }
 
-    format = "select last_insert_id() as 'ID'";
+    return id;
 
-    if (mysql_stmt_prepare(statement, format, strlen(format)) != 0)
-    {
-        end("Formatting failed: %s", mysql_stmt_error(statement));
-    }
-
-    if (mysql_stmt_param_count(statement) != 0)
-    {
-        end("MySql Invalid Argument count");
-    }
-
-    // We first execute then grab the results
-
-    if (mysql_stmt_execute(statement) != 0)
-    {
-        end("Statement Error: %s", mysql_stmt_error(statement));
-    }
-
-    MYSQL_BIND parameters[1] = {};
-
-    char id[64] = {};
-
-    parameters->buffer_type = MYSQL_TYPE_STRING;
-    parameters->buffer = id;
-    parameters->buffer_length = sizeof(id) / sizeof(char);
-    parameters->is_unsigned = true;
-
-    if (mysql_stmt_bind_result(statement, parameters) != 0)
-    {
-        end("Error while binding: %s\n", mysql_stmt_error(statement));
-    }
-
-    if (mysql_stmt_store_result(statement) != 0)
-    {
-        end("Failed to store statement result: ", mysql_stmt_error(statement));
-    }
-
-    if (mysql_stmt_fetch(statement) != 0)
-    {
-        end("Failed to get insertion ID");
-    }
-
-    return strdup(id);
 }
 
 
@@ -162,19 +122,19 @@ void add_villain()
     AUTO_FREE char *species_id;
     AUTO_FREE char *rival_hero_id;
 
-    printw("Hero Name:");
+    printw("Villain Name:");
     name = read_single_line();
 
-    printw("Hero Codename:");
+    printw("Villain Codename:");
     codename = read_single_line();
 
-    printw("Hero Species ID:");
+    printw("Villain Species ID:");
     species_id = read_single_line();
 
     printw("Rival Hero ID:");
     rival_hero_id = read_single_line();
 
-    AUTO_FREE MYSQL *connection = database_connect();
+    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
 
     AUTO_FREE char *entity_id = insert_entity(connection, species_id, name, codename);
 
@@ -190,7 +150,8 @@ void add_villain()
     }
 }
 
-static void perform_insertion(const char *query, const char **labels)
+
+static int perform_insertion_connected(MYSQL *connection, const char *query, const char **labels)
 {
     size_t count = 0;
 
@@ -206,7 +167,6 @@ static void perform_insertion(const char *query, const char **labels)
 
     arguments[count] = NULL;
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
 
     AUTO_FREE const char *error = database_execute_command(connection, query, (const char **) arguments);
 
@@ -217,8 +177,20 @@ static void perform_insertion(const char *query, const char **labels)
 
     if (error)
     {
-        end("%s", error);
+        printw("%s", error);
+        refresh();
+        getch();
+        return 1;
     }
+    else
+    {
+        return 0;
+    }
+}
+static inline void perform_insertion(const char *query, const char **labels)
+{
+    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    perform_insertion_connected(connection, query, labels);
 }
 
 void add_trait()
@@ -247,15 +219,63 @@ void add_trait()
 
 void add_attack()
 {
-    // TODO: Associated Villains
     const char *labels[3] = {"Date (yyyy-MM-dd):", "Location:", NULL};
 
-    perform_insertion("insert into Attack (EventDate, Location) values (?,?)", labels);
+    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+
+    if (perform_insertion_connected(connection, "insert into Attack (EventDate, Location) values (?,?)", labels))
+    {
+        return;
+    }
+
+    printw("Note: Dash separated e.g \"10-20-30\", leave empty for none.\n");
+    printw("Associated Villains: ");
+
+    AUTO_FREE char *line = read_single_line();
+
+    char *trim = full_trim_string(line);
+
+    if (*trim)
+    {
+
+        AUTO_FREE char *id = NULL;
+
+        const char *error = database_get_last_insertion_id(connection, &id);
+
+        if (error)
+        {
+            end("Failed to insert villains: %s", error);
+        }
+
+        char *token = strtok(trim, "-");
+
+        while (token != NULL)
+        {
+            char *message = "insert into AttackAggregation(VillainID, AttackID) values (?, ?);";
+
+            const char *arguments[] = {
+                    token,
+                    id,
+                    NULL
+            };
+
+            error = database_execute_command(connection, message, arguments);
+
+            if (error)
+            {
+                end("Failed to insert villain %s : %s", token, error);
+            }
+
+            token = strtok(NULL, "-");
+        }
+    }
+
+
 }
 
 void add_equipment()
 {
-    const char *command = "Insert into Equipment (ID, Name, Description, Utility, EntityID) values (?, ?, ?, ?, ?);";
+    const char *command = "Insert into Equipment (Name, Description, Utility, EntityID) values (?, ?, ?, ?);";
 
     const char *labels[5] = {
             "Name:",

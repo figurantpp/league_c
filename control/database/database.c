@@ -120,3 +120,73 @@ const char* database_execute_command(MYSQL *connection, const char *query, const
     return NULL;
 }
 
+const char *database_get_last_insertion_id(MYSQL *connection, char **id_pointer)
+{
+    if (connection == NULL)
+    {
+        return "database_get_last_insertion_id: NULL MYSQL* given";
+    }
+    else if (id_pointer == NULL)
+    {
+        return "database_get_last_insertion_id: NULL parameter \"id_pointer\" given";
+    }
+
+    UNIQUE_POINTER(MYSQL_STMT)statement = mysql_stmt_init(connection);
+
+    if (!statement)
+    {
+        return "Not enough memory to initialize selection";
+    }
+
+    char *format = "select last_insert_id() as 'ID'";
+
+    if (mysql_stmt_prepare(statement, format, strlen(format)) != 0)
+    {
+        return mysql_stmt_error(statement);
+    }
+
+    if (mysql_stmt_param_count(statement) != 0)
+    {
+        return "MySql Invalid Argument count";
+    }
+
+    // We first execute then grab the results
+
+    if (mysql_stmt_execute(statement) != 0)
+    {
+        return mysql_stmt_error(statement);
+    }
+
+    MYSQL_BIND parameters[1] = {};
+
+    char id[64] = {};
+
+    parameters->buffer_type = MYSQL_TYPE_STRING;
+    parameters->buffer = id;
+    parameters->buffer_length = sizeof(id) / sizeof(char);
+    parameters->is_unsigned = true;
+
+    if (mysql_stmt_bind_result(statement, parameters) != 0)
+    {
+        return "Error while binding: %s\n";
+    }
+
+    if (mysql_stmt_store_result(statement) != 0)
+    {
+        return "Failed to store statement result: ";
+    }
+
+    if (mysql_stmt_fetch(statement) != 0)
+    {
+        return "Failed to get insertion ID";
+    }
+
+    *id_pointer = strdup(id);
+
+    if (*id_pointer == NULL)
+    {
+        return "Not enough memory";
+    }
+
+    return NULL;
+}

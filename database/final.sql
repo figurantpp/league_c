@@ -182,6 +182,12 @@ create view AttackData as
 select *
 from Attack;
 
+create view AttackVillains as
+select Villain.ID,  Entity.Codename from Attack
+    inner join AttackAggregation on Attack.ID = AttackAggregation.AttackID
+    inner join Villain on AttackAggregation.VillainID = Villain.ID
+    inner join Entity on Villain.EntityID = Entity.ID;
+
 create view EquipmentData as
 select *
 from Equipment;

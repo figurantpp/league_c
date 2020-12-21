@@ -23,6 +23,8 @@ __attribute__((returns_nonnull))
 __attribute__((warn_unused_result))
 void *zcalloc(size_t nmemb, size_t size);
 
+char *zstrdup(const char *str);
+
 void z_alloc_set_abort_function(void (*abort_function)());
 
 #endif

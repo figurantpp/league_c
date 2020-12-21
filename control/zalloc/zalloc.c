@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <fullmacro/deconstruct.h>
+#include <memory.h>
 #include "zalloc.h"
 
 static void (*abort_function)() = abort;
@@ -42,13 +43,29 @@ void *zcalloc(size_t nmemb, size_t size)
     return result;
 }
 
-
-
 void z_alloc_set_abort_function(void (*function)())
 {
-
     abort_function = function;
 }
+
+char *zstrdup(const char *str)
+{
+    if (str == NULL)
+    {
+        return NULL;
+    }
+
+    char *result = strdup(str);
+
+    if (!result)
+    {
+        abort_function();
+    }
+
+    return result;
+}
+
+// UNIQUE_POINTER(FILE) definitions
 
 #include <stdio.h>
 
