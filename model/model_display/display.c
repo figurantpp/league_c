@@ -3,7 +3,6 @@
 #include <ncurses.h>
 
 #include <zalloc/zalloc.h>
-#include <fullmacro/deconstruct.h>
 #include "database/database.h"
 
 #include <c-iterator/implementations/variadic/variadic.h>
@@ -21,11 +20,14 @@
 
 
 
+// AUTO: Fix
 void hero_display(struct HeroData *data)
 {
-    AUTO_FREE char *art = hero_image_from_codename(data->codename, NULL);
+    char *art = hero_image_from_codename(data->codename, NULL);
 
     printw("%s", art ?: "");
+
+    free(art);
 
 #define SHOW(type, name) \
     printw(#name ": %s", data->name); \
@@ -48,16 +50,17 @@ static void hero_from_row(struct HeroData *data, MYSQL_ROW row)
 }
 
 
+// AUTO: Fix
 void show_heroes()
 {
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
     if (mysql_query(connection, "select * from HeroData;") != 0)
     {
         printw("Execution failed: %s\n", mysql_error(connection));
     }
 
-    UNIQUE_POINTER(MYSQL_RES)result = mysql_store_result(connection);
+    MYSQL_RES *result = mysql_store_result(connection);
 
     struct HeroData data = {};
 
@@ -70,9 +73,13 @@ void show_heroes()
         hero_from_row(&data, row);
 
         hero_display(&data);
+
+        memset(&data, 0, sizeof(struct HeroData));
     }
 
-    memset(&data, 0, sizeof(struct HeroData));
+    mysql_free_result(result);
+    mysql_close(connection);
+
 
     refresh();
 
@@ -82,6 +89,7 @@ void show_heroes()
 }
 
 
+// AUTO: Fix
 // We don't use an iterator here cause we need to go through more than once
 void display_data_buffer(char *table, const char **labels)
 {
@@ -90,20 +98,22 @@ void display_data_buffer(char *table, const char **labels)
     // size - "%s" + '\0'
     size_t size = strlen(format) + strlen(table) - 2 + 1;
 
-    AUTO_FREE char *message = zmalloc(size);
+    char *message = zmalloc(size);
 
     snprintf(message, size, format, table);
 
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
     if (mysql_query(connection, message) != 0)
     {
         printw("Execution failed: %s\n", mysql_error(connection));
     }
 
+    free(message);
 
-    UNIQUE_POINTER(MYSQL_RES)result = mysql_store_result(connection);
+
+    MYSQL_RES *result = mysql_store_result(connection);
 
     MYSQL_ROW row;
 
@@ -122,6 +132,9 @@ void display_data_buffer(char *table, const char **labels)
 
     }
 
+    mysql_free_result(result);
+    mysql_close(connection);
+
     refresh();
 
     getch();
@@ -133,10 +146,11 @@ void display_data(char *table, ...)
     va_list args;
     va_start(args, table);
 
-
-    AUTO_FREE const char **buffer = store_iterator(pointer_va_list_iterator(&args), sizeof(char*), NULL);
+    const char **buffer = store_iterator(pointer_va_list_iterator(&args), sizeof(char*), NULL);
 
     display_data_buffer(table, buffer);
+
+    free(buffer);
 }
 
 void show_villains()
@@ -144,26 +158,33 @@ void show_villains()
     display_data("VillainData", "ID", "Name", "Codename", "Species", "Species", "Rival", NULL);
 }
 
+// AUTO: Fix
 static void show_attack_villains(MYSQL *connection, char *id)
 {
 
-#define end(message) ({printw("Error while showing villains: %s\n", message); refresh(); return;})
+#define free_data() \
+        ({ mysql_stmt_close(statement); })
+
+#define end(message) \
+        ({ printw("Error while showing villains: %s\n", message); free_data(); refresh(); return;})
 
     printw("Villains:\n");
 
     const char *query = "select * from AttackVillains where ID = ?";
 
-    UNIQUE_POINTER(MYSQL_STMT) statement = mysql_stmt_init(connection);
+    MYSQL_STMT *statement = mysql_stmt_init(connection);
 
     if (mysql_stmt_prepare(statement, query, strlen(query)))
     {
         end( mysql_stmt_error(statement));
     }
+
     size_t count = mysql_stmt_param_count(statement);
 
     if (count != 1)
     {
         printw("Invalid statement count (query expected %zu, got %zu)\n", count, 1);
+        mysql_stmt_close(statement);
         refresh();
         return;
     }
@@ -216,7 +237,10 @@ static void show_attack_villains(MYSQL *connection, char *id)
         printw("%-10s: %s\n", "Codename", is_null[1] ? "NULL" : villain_name);
     }
 
+    mysql_stmt_close(statement);
+
 #undef end
+#undef free_data
 
 }
 
@@ -224,14 +248,16 @@ void show_attacks()
 {
     char *message = "select * from AttackData;";
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
     if (mysql_query(connection, message) != 0)
     {
         printw("Execution failed: %s\n", mysql_error(connection));
+        mysql_close(connection);
+        return;
     }
 
-    UNIQUE_POINTER(MYSQL_RES) result = mysql_store_result(connection);
+    MYSQL_RES *result = mysql_store_result(connection);
 
     for (MYSQL_ROW row; (row = mysql_fetch_row(result));)
     {
@@ -243,6 +269,9 @@ void show_attacks()
 
         show_attack_villains(connection, row[0]);
     }
+
+    mysql_free_result(result);
+    mysql_close(connection);
 
     refresh();
 
