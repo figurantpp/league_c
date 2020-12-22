@@ -15,6 +15,7 @@
 #define end(message, ...) \
     ({printw("Insertion failed.\n"); printw(message, ##__VA_ARGS__); refresh(); getch(); return NULL;})
 
+// AUTO: Fix
 /**
  * Inserts an entity with the given data and return its ID.
  * @param connection The connection to operate on
@@ -31,7 +32,7 @@ static char *insert_entity(MYSQL *connection, const char *species_id, const char
 
     const char *arguments[4] = {species_id, name, codename, NULL};
 
-    AUTO_FREE const char *message = database_execute_command(connection, format, arguments);
+    const char *message = database_execute_command(connection, format, arguments);
 
     if (message)
     {
@@ -60,12 +61,23 @@ static char *insert_entity(MYSQL *connection, const char *species_id, const char
 
 void add_hero()
 {
-    AUTO_FREE char *name = NULL;
-    AUTO_FREE char *codename = NULL;
-    AUTO_FREE char *species_id = NULL;
-    AUTO_FREE char *access_level = NULL;
-    AUTO_FREE char *username = NULL;
-    AUTO_FREE char *password = NULL;
+#define clear_input() \
+    ({                    \
+        free(name); \
+        free(codename); \
+        free(species_id); \
+        free(access_level); \
+        free(username); \
+        free(password);       \
+    })
+
+
+    char *name = NULL;
+    char *codename = NULL;
+    char *species_id = NULL;
+    char *access_level = NULL;
+    char *username = NULL;
+    char *password = NULL;
 
     printw("Hero Name:");
     name = read_single_line();
@@ -88,16 +100,18 @@ void add_hero()
     // TODO: Implement Traits
     // printw("Traits:");
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
-    AUTO_FREE char *entity_id = insert_entity(connection, species_id, name, codename);
+    char *entity_id = insert_entity(connection, species_id, name, codename);
+
+    mysql_close(connection);
 
     if (entity_id == NULL)
     {
+        clear_input();
         return;
     }
 
-    mysql_close(connection);
 
     connection = database_connect();
 
@@ -105,22 +119,38 @@ void add_hero()
 
     const char *arguments[5] = {entity_id, access_level, username, password, NULL};
 
-    AUTO_FREE const char *error = database_execute_command(connection, command, arguments);
+    const char *error = database_execute_command(connection, command, arguments);
+
+    mysql_close(connection);
+
+    clear_input();
+
+    free(entity_id);
 
     if (error)
     {
         end(error);
     }
 
+
+#undef clear_input
+
 }
 
 
 void add_villain()
 {
-    AUTO_FREE char *name;
-    AUTO_FREE char *codename;
-    AUTO_FREE char *species_id;
-    AUTO_FREE char *rival_hero_id;
+
+#define clear_input() \
+    ({ free(name); \
+    free(codename); \
+    free(species_id); \
+    free(rival_hero_id); }) \
+
+    char *name;
+    char *codename;
+    char *species_id;
+    char *rival_hero_id;
 
     printw("Villain Name:");
     name = read_single_line();
@@ -134,20 +164,27 @@ void add_villain()
     printw("Rival Hero ID:");
     rival_hero_id = read_single_line();
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
-    AUTO_FREE char *entity_id = insert_entity(connection, species_id, name, codename);
+    char *entity_id = insert_entity(connection, species_id, name, codename);
 
     const char *command = "insert into Villain(EntityID, RivalHeroID) values (?, ?)";
 
     const char *arguments[3] = {entity_id, rival_hero_id, NULL};
 
-    AUTO_FREE const char *error = database_execute_command(connection, command, arguments);
+    const char *error = database_execute_command(connection, command, arguments);
+
+    free(entity_id);
+    mysql_close(connection);
+
+    clear_input();
 
     if (error)
     {
         end(error);
     }
+
+#undef clear_input
 }
 
 
@@ -157,7 +194,7 @@ static int perform_insertion_connected(MYSQL *connection, const char *query, con
 
     for (const char **i = labels; *i++; count++);
 
-    AUTO_FREE char **arguments = zmalloc((count + 1) * sizeof(const char *));
+    char **arguments = zmalloc((count + 1) * sizeof(const char *));
 
     for (size_t i = 0; i < count; i++)
     {
@@ -168,12 +205,14 @@ static int perform_insertion_connected(MYSQL *connection, const char *query, con
     arguments[count] = NULL;
 
 
-    AUTO_FREE const char *error = database_execute_command(connection, query, (const char **) arguments);
+    const char *error = database_execute_command(connection, query, (const char **) arguments);
 
     for (size_t i = 0; i < count; i++)
     {
         free(arguments[i]);
     }
+
+    free(arguments);
 
     if (error)
     {
@@ -187,29 +226,35 @@ static int perform_insertion_connected(MYSQL *connection, const char *query, con
         return 0;
     }
 }
+
 static inline void perform_insertion(const char *query, const char **labels)
 {
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
     perform_insertion_connected(connection, query, labels);
+    mysql_close(connection);
 }
 
 void add_trait()
 {
 
     printw("Trait Name:");
-    AUTO_FREE char *name = read_single_line();
+    char *name = read_single_line();
 
     printw("IsAdvantage (yes/no):");
-    AUTO_FREE char *is_advantage_input = read_single_line();
+    char *is_advantage_input = read_single_line();
     bool is_advantage = is_advantage_input[0] == 'y' || is_advantage_input[0] == 'Y';
 
     const char *command = "insert into Trait (Name, IsAdvantage) values (?,?)";
 
     const char *arguments[3] = {name, is_advantage ? "1" : "0", NULL};
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
-    AUTO_FREE const char *error = database_execute_command(connection, command, arguments);
+    const char *error = database_execute_command(connection, command, arguments);
+
+    mysql_close(connection);
+    free(is_advantage_input);
+    free(name);
 
     if (error)
     {
@@ -221,29 +266,31 @@ void add_attack()
 {
     const char *labels[3] = {"Date (yyyy-MM-dd):", "Location:", NULL};
 
-    DATABASE_AUTO_CLOSE MYSQL *connection = database_connect();
+    MYSQL *connection = database_connect();
 
     if (perform_insertion_connected(connection, "insert into Attack (EventDate, Location) values (?,?)", labels))
     {
+        mysql_close(connection);
         return;
     }
 
     printw("Note: Dash separated e.g \"10-20-30\", leave empty for none.\n");
     printw("Associated Villains: ");
 
-    AUTO_FREE char *line = read_single_line();
+    char *line = read_single_line();
 
     char *trim = full_trim_string(line);
 
     if (*trim)
     {
-
-        AUTO_FREE char *id = NULL;
+        char *id = NULL;
 
         const char *error = database_get_last_insertion_id(connection, &id);
 
         if (error)
         {
+            free(line);
+            mysql_close(connection);
             end("Failed to insert villains: %s", error);
         }
 
@@ -263,12 +310,20 @@ void add_attack()
 
             if (error)
             {
+                mysql_close(connection);
+                free(line);
+                free(id);
                 end("Failed to insert villain %s : %s", token, error);
             }
 
             token = strtok(NULL, "-");
         }
+
+        free(line);
+        free(id);
+        mysql_close(connection);
     }
+
 
 
 }
