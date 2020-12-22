@@ -5,10 +5,6 @@
 
 #include "database.h"
 #include "config/config.h"
-#include "fullmacro/deconstruct.h"
-
-SET_POINTER_DECONSTRUCTOR(MYSQL_RES, mysql_free_result)
-SET_POINTER_DECONSTRUCTOR(MYSQL_STMT, mysql_stmt_close)
 
 void database_setup()
 {}
@@ -55,9 +51,13 @@ MYSQL *database_connect()
     }
 }
 
+static char global_pool[1024];
+static const size_t global_pool_size = 1024;
+
 #include <string.h>
 #include <zalloc/zalloc.h>
 
+// Not thread safe: uses global_pool
 const char* database_execute_command(MYSQL *connection, const char *query, const char ** const arguments)
 {
     size_t count = 0;
@@ -67,7 +67,7 @@ const char* database_execute_command(MYSQL *connection, const char *query, const
         for (const char** i = arguments; *i++; count++);
     }
 
-    UNIQUE_POINTER(MYSQL_STMT) statement = mysql_stmt_init(connection);
+    MYSQL_STMT* statement = mysql_stmt_init(connection);
 
     if (!statement)
     {
@@ -76,6 +76,7 @@ const char* database_execute_command(MYSQL *connection, const char *query, const
 
     if (mysql_stmt_prepare(statement, query, strlen(query)))
     {
+        mysql_stmt_close(statement);
         return mysql_stmt_error(statement);
     }
 
@@ -83,20 +84,30 @@ const char* database_execute_command(MYSQL *connection, const char *query, const
 
     if (expected > count)
     {
+        mysql_stmt_close(statement);
+
         char *format = "MYSQL query has more statements then the provided amount (expected: %lu, provided: %lu)";
+        char *substitute_format = "MYSQL query has more statements then the provided amount.";
+        char *result;
 
         size_t size = strlen(format) + (sizeof(unsigned long) / 3) * 2;
 
-        char *buffer = zmalloc(size);
+        if (size < global_pool_size)
+        {
+            result = global_pool;
+            snprintf(result, size, format, expected, count);
+        }
+        else
+        {
+            result = substitute_format;
+        }
 
-        snprintf(buffer, size, format, expected, count);
-
-        return buffer;
+        return result;
     }
 
     if (arguments)
     {
-        AUTO_FREE MYSQL_BIND *binding = zcalloc(count, sizeof(MYSQL_BIND));
+        MYSQL_BIND *binding = zcalloc(count, sizeof(MYSQL_BIND));
 
         for (size_t i = 0; i < count; i++)
         {
@@ -107,15 +118,25 @@ const char* database_execute_command(MYSQL *connection, const char *query, const
 
         if (mysql_stmt_bind_param(statement, binding))
         {
+            free(binding);
             return mysql_stmt_error(statement);
         }
+
+        free(binding);
     }
 
     if (mysql_stmt_execute(statement))
     {
-        const char *result = strdup(mysql_stmt_error(statement));
-        return result ?: "Out of memory to allocate statement execution error message";
+        char *buffer = global_pool;
+
+        strcpy(buffer, mysql_stmt_error(statement));
+
+        mysql_stmt_close(statement);
+
+        return buffer;
     }
+
+    mysql_stmt_close(statement);
 
     return NULL;
 }
@@ -131,7 +152,7 @@ const char *database_get_last_insertion_id(MYSQL *connection, char **id_pointer)
         return "database_get_last_insertion_id: NULL parameter \"id_pointer\" given";
     }
 
-    UNIQUE_POINTER(MYSQL_STMT)statement = mysql_stmt_init(connection);
+    MYSQL_STMT* statement = mysql_stmt_init(connection);
 
     if (!statement)
     {
@@ -142,11 +163,13 @@ const char *database_get_last_insertion_id(MYSQL *connection, char **id_pointer)
 
     if (mysql_stmt_prepare(statement, format, strlen(format)) != 0)
     {
+        mysql_stmt_close(statement);
         return mysql_stmt_error(statement);
     }
 
     if (mysql_stmt_param_count(statement) != 0)
     {
+        mysql_stmt_close(statement);
         return "MySql Invalid Argument count";
     }
 
@@ -154,6 +177,7 @@ const char *database_get_last_insertion_id(MYSQL *connection, char **id_pointer)
 
     if (mysql_stmt_execute(statement) != 0)
     {
+        mysql_stmt_close(statement);
         return mysql_stmt_error(statement);
     }
 
@@ -168,20 +192,25 @@ const char *database_get_last_insertion_id(MYSQL *connection, char **id_pointer)
 
     if (mysql_stmt_bind_result(statement, parameters) != 0)
     {
+        mysql_stmt_close(statement);
         return "Error while binding: %s\n";
     }
 
     if (mysql_stmt_store_result(statement) != 0)
     {
+        mysql_stmt_close(statement);
         return "Failed to store statement result: ";
     }
 
     if (mysql_stmt_fetch(statement) != 0)
     {
+        mysql_stmt_close(statement);
         return "Failed to get insertion ID";
     }
 
     *id_pointer = strdup(id);
+
+    mysql_stmt_close(statement);
 
     if (*id_pointer == NULL)
     {

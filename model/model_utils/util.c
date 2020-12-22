@@ -23,9 +23,9 @@ char *hero_image_from_codename(char *codename, size_t *ascii_art_size)
 
     char *position;
 
-    AUTO_FREE char *file_path = NULL;
+    char *file_path = NULL;
 
-    UNIQUE_POINTER(FILE) file = NULL;
+    FILE *file = NULL;
 
     // Replacing spaces with _
     while ((position = strchr(codename, ' ')))
@@ -46,10 +46,16 @@ char *hero_image_from_codename(char *codename, size_t *ascii_art_size)
 
     file = fopen(file_path, "r");
 
+    free(file_path);
+
     if (file == NULL)
     {
         return NULL;
     }
 
-    return read_whole_file(file, ascii_art_size);
+    char *result = read_whole_file(file, ascii_art_size);
+
+    fclose(file);
+
+    return result;
 }

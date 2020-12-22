@@ -161,8 +161,9 @@ void *login_perform(char *username, char *password)
             attron(COLOR_PAIR(1));
         }
 
-        AUTO_FREE char *message = figlet("Error");
+        char *message = figlet("Error");
         write_center(message);
+        free(message);
 
         printw("Unauthorized Access; Aborting.\n");
 
