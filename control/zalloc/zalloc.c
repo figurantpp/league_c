@@ -1,6 +1,5 @@
 
 #include <stdlib.h>
-#include <fullmacro/deconstruct.h>
 #include <memory.h>
 #include "zalloc.h"
 
@@ -65,16 +64,3 @@ char *zstrdup(const char *str)
     return result;
 }
 
-// UNIQUE_POINTER(FILE) definitions
-
-#include <stdio.h>
-
-static void file_free(FILE *file)
-{
-    if (file)
-    {
-        fclose(file);
-    }
-}
-
-SET_POINTER_DECONSTRUCTOR(FILE, file_free);

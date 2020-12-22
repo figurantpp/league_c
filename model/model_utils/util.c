@@ -4,7 +4,6 @@
 
 #include "util.h"
 
-#include <fullmacro/deconstruct.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>

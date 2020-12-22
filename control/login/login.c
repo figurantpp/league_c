@@ -13,8 +13,6 @@
 #include "model_utils/util.h"
 
 
-SET_POINTER_DECONSTRUCTOR(StructHeroLogin, hero_login_delete)
-SET_POINTER_DECONSTRUCTOR_STATIC(FILE, fclose)
 
 // DONE
 static void display_hero_image(char *codename)

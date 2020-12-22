@@ -67,12 +67,6 @@ add_library(menu
         )
 
 add_library(
-        fullmacro
-        STATIC
-        control/fullmacro/fullmacro.c control/fullmacro/deconstruct.h
-)
-
-add_library(
         iterator
         STATIC
         control/c-iterator/iterator.h

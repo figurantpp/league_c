@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include <stream/stream.h>
-#include <fullmacro/deconstruct.h>
 #include <c-iterator/implementations/track/track.h>
 #include <database/operations/operations.h>
 #include <util/util.h>
