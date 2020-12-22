@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.17)
 project(league C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 
 # Preprocessor
 # set(CMAKE_C_FLAGS "-E")
+
+set(CMAKE_C_FLAGS "-Wall -Wno-unused-function")
+
 
 include_directories(control)
 include_directories(model)
